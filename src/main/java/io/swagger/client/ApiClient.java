@@ -49,9 +49,10 @@ import io.swagger.client.auth.HttpBasicAuth;
 import io.swagger.client.auth.ApiKeyAuth;
 import io.swagger.client.auth.OAuth;
 
+
 public class ApiClient {
 
-    private String basePath = "https://sdk-test.marax.ai/sdk/v1";
+    private String basePath = "https://gateway.marax.ai/sdk/v1";
     private boolean debugging = false;
     private Map<String, String> defaultHeaderMap = new HashMap<String, String>();
     private String tempFolderPath = null;
@@ -113,6 +114,9 @@ public class ApiClient {
         authentications = Collections.unmodifiableMap(authentications);
     }
 
+    public void paintTheWebview() {
+
+    }
 
     /**
      * Get base path
