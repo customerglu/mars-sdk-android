@@ -8,6 +8,7 @@ import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -170,8 +171,18 @@ public class RudderClient {
 //        offerWebView.setHttpAuthUsernamePassword ("https://enn2ytpu410z.x.pipedream.net",  "test", "hoy", this.repository.getAuthHeaderString());
         webSettings.setJavaScriptEnabled(true);
 
+        offerWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                view.loadUrl(url);
+                return true;
+            }
+        });
+
+
+
 //        https://webview-demo.marax.ai/offers
-        offerWebView.loadUrl("https://offer-constructs.now.sh");
+        offerWebView.loadUrl("https://nextjs-offer-constructs.now.sh");
 
         return offerWebView;
 //        Map<String,Object> properties = new HashMap<>();
