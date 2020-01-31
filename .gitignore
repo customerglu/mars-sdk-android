@@ -1,0 +1,12 @@
+**/.DS_Store
+*.iml
+**/build/
+.gradle/
+.idea/
+local.properties
+**/.project
+**/.settings
+**/.classpath
+rudder-sdk-sample-*
+rudder-integration-dummy-*
+
