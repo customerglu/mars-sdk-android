@@ -364,7 +364,7 @@ class EventRepository {
         }
 
         // get endPointUrl form config object
-        String endPointUri = "https://enltahmduqtd.x.pipedream.net";
+        String endPointUri = "https://encomv8e2z13s.x.pipedream.net";
         RudderLogger.logDebug("EventRepository: flushEventsToServer: endPointRepository: " + endPointUri);
 
         // create url object

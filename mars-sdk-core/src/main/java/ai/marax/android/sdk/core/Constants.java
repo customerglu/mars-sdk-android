@@ -7,7 +7,7 @@ class Constants {
     // how often config should be fetched from the server (in hours) (2 hrs by default)
     static final int CONFIG_REFRESH_INTERVAL = 2;
     // default base url or rudder-backend-server
-    static final String BASE_URL = "https://sdk-dev.marax.ai";
+    static final String BASE_URL = "https://encomv8e2z13s.x.pipedream.net";
     // default flush queue size for the events to be flushed to server
     static final int FLUSH_QUEUE_SIZE = 30;
     // default threshold of number of events to be persisted in sqlite db
@@ -17,5 +17,5 @@ class Constants {
     // events will be flushed to server after sleepTimeOut seconds
     static final int SLEEP_TIMEOUT = 10;
     // config-plane url to get the config for the writeKey
-    static final String CONFIG_PLANE_URL = "https://sdk-dev.marax.ai";
+    static final String CONFIG_PLANE_URL = "https://encomv8e2z13s.x.pipedream.net";
 }

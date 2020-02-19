@@ -7,6 +7,4 @@ local.properties
 **/.project
 **/.settings
 **/.classpath
-rudder-sdk-sample-*
-rudder-integration-dummy-*
 

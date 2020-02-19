@@ -1,21 +1,21 @@
 ext {
-    bintrayRepo = 'rudder-sdk-android-core'
-    bintrayName = 'rudder-sdk-android-core'
+    bintrayRepo = 'mars-sdk-android-core'
+    bintrayName = 'mars-sdk-android-core'
 
     publishedGroupId = 'com.rudderlabs.android.sdk'
-    libraryName = 'RudderAndroidSdkCore'
-    artifact = 'rudder-sdk-core'
+    libraryName = 'MarsAndroidSdkCore'
+    artifact = 'mars-sdk-core'
 
-    libraryDescription = 'Android  SDK for Rudderlabs. Steer your customer data'
+    libraryDescription = 'Android  SDK for Mars.'
 
-    siteUrl = 'https://github.com/rudderlabs/rudder-sdk-android'
-    gitUrl = 'https://github.com/rudderlabs/rudder-sdk-android.git'
+    siteUrl = 'https://github.com/marax-ai/mars-sdk-android'
+    gitUrl = 'https://github.com/marax-ai/mars-sdk-android.git'
 
     libraryVersion = '0.1.4'
 
-    developerId = 'arnabp92'
-    developerName = 'Arnab Pal'
-    developerEmail = 'arnab@rudderlabs.com'
+    developerId = 'juluahamed'
+    developerName = 'Julu Ahamed'
+    developerEmail = 'julu@marax.in'
 
     licenseName = 'The Apache Software License, Version 2.0'
     licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
