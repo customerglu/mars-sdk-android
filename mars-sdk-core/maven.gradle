@@ -2,7 +2,7 @@ ext {
     bintrayRepo = 'mars-sdk-android-core'
     bintrayName = 'mars-sdk-android-core'
 
-    publishedGroupId = 'com.rudderlabs.android.sdk'
+    publishedGroupId = 'ai.mars.android.sdk'
     libraryName = 'MarsAndroidSdkCore'
     artifact = 'mars-sdk-core'
 
