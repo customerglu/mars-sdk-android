@@ -28,10 +28,11 @@ public class Utils {
     public static final int MAX_FLUSH_QUEUE_SIZE = 100;
 
     // keys
-    public static final String RUDDER_PREFS = "rl_prefs";
-    public static final String RUDDER_SERVER_CONFIG_KEY = "rl_server_config";
-    public static final String RUDDER_SERVER_CONFIG_LAST_UPDATE_KEY = "rl_server_last_updated";
-    public static final String RUDDER_TRAITS_KEY = "rl_traits";
+    public static final String MARS_PREFS = "mars_prefs";
+    public static final String MARS_SERVER_CONFIG_KEY = "mars_server_config";
+    public static final String MARS_SERVER_CONFIG_LAST_UPDATE_KEY = "mars_server_last_updated";
+    public static final String MARS_TRAITS_KEY = "mars_traits";
+
 
     public static String getTimeZone() {
         TimeZone timeZone = TimeZone.getDefault();
@@ -74,7 +75,7 @@ public class Utils {
         int id = context.getResources().getIdentifier(
                 context.getPackageName(),
                 "string",
-                "rudder_write_key"
+                "mars_write_key"
         );
         if (id != 0) {
             return context.getResources().getString(id);

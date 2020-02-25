@@ -28,9 +28,9 @@ class DBPersistentManager extends SQLiteOpenHelper {
     private void createSchema(SQLiteDatabase db) {
         String createSchemaSQL = String.format(Locale.US, "CREATE TABLE IF NOT EXISTS '%s' ('%s' INTEGER PRIMARY KEY AUTOINCREMENT, '%s' TEXT NOT NULL, '%s' INTEGER NOT NULL)",
                 EVENTS_TABLE_NAME, MESSAGE_ID, MESSAGE, UPDATED);
-        RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: createSchema: createSchemaSQL: %s", createSchemaSQL));
+        MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: createSchema: createSchemaSQL: %s", createSchemaSQL));
         db.execSQL(createSchemaSQL);
-        RudderLogger.logInfo("DBPersistentManager: createSchema: DB Schema created");
+        MarsLogger.logInfo("DBPersistentManager: createSchema: DB Schema created");
     }
 
     /*
@@ -41,11 +41,11 @@ class DBPersistentManager extends SQLiteOpenHelper {
         if (database.isOpen()) {
             String saveEventSQL = String.format(Locale.US, "INSERT INTO %s (%s, %s) VALUES ('%s', %d)",
                     EVENTS_TABLE_NAME, MESSAGE, UPDATED, messageJson.replaceAll("'", "\\\\\'"), System.currentTimeMillis());
-            RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: saveEvent: saveEventSQL: %s", saveEventSQL));
+            MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: saveEvent: saveEventSQL: %s", saveEventSQL));
             database.execSQL(saveEventSQL);
-            RudderLogger.logInfo("DBPersistentManager: saveEvent: Event saved to DB");
+            MarsLogger.logInfo("DBPersistentManager: saveEvent: Event saved to DB");
         } else {
-            RudderLogger.logError("DBPersistentManager: saveEvent: database is not writable");
+            MarsLogger.logError("DBPersistentManager: saveEvent: database is not writable");
         }
     }
 
@@ -53,7 +53,7 @@ class DBPersistentManager extends SQLiteOpenHelper {
      * delete event with single messageId
      * */
     void clearEventFromDB(int messageId) {
-        RudderLogger.logInfo(String.format(Locale.US, "DBPersistentManager: clearEventFromDB: Deleting event with messageID: %d", messageId));
+        MarsLogger.logInfo(String.format(Locale.US, "DBPersistentManager: clearEventFromDB: Deleting event with messageID: %d", messageId));
         List<Integer> messageIds = new ArrayList<>();
         messageIds.add(messageId);
         clearEventsFromDB(messageIds);
@@ -66,7 +66,7 @@ class DBPersistentManager extends SQLiteOpenHelper {
         // get writable database
         SQLiteDatabase database = getWritableDatabase();
         if (database.isOpen()) {
-            RudderLogger.logInfo(String.format(Locale.US, "DBPersistentManager: clearEventsFromDB: Clearing %d messages from DB", messageIds.size()));
+            MarsLogger.logInfo(String.format(Locale.US, "DBPersistentManager: clearEventsFromDB: Clearing %d messages from DB", messageIds.size()));
             // format CSV string from messageIds list
             StringBuilder builder = new StringBuilder();
             for (int index = 0; index < messageIds.size(); index++) {
@@ -78,11 +78,11 @@ class DBPersistentManager extends SQLiteOpenHelper {
             // remove events
             String deleteSQL = String.format(Locale.US, "DELETE FROM %s WHERE %s IN (%s)",
                     EVENTS_TABLE_NAME, MESSAGE_ID, builder.toString());
-            RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: clearEventsFromDB: deleteSQL: %s", deleteSQL));
+            MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: clearEventsFromDB: deleteSQL: %s", deleteSQL));
             database.execSQL(deleteSQL);
-            RudderLogger.logInfo("DBPersistentManager: clearEventsFromDB: Messages deleted from DB");
+            MarsLogger.logInfo("DBPersistentManager: clearEventsFromDB: Messages deleted from DB");
         } else {
-            RudderLogger.logError("DBPersistentManager: clearEventsFromDB: database is not writable");
+            MarsLogger.logError("DBPersistentManager: clearEventsFromDB: database is not writable");
         }
     }
 
@@ -98,21 +98,21 @@ class DBPersistentManager extends SQLiteOpenHelper {
         SQLiteDatabase database = getReadableDatabase();
         if (database.isOpen()) {
             String selectSQL = String.format(Locale.US, "SELECT * FROM %s ORDER BY %s ASC LIMIT %d", EVENTS_TABLE_NAME, UPDATED, count);
-            RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: fetchEventsFromDB: selectSQL: %s", selectSQL));
+            MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: fetchEventsFromDB: selectSQL: %s", selectSQL));
             Cursor cursor = database.rawQuery(selectSQL, null);
             if (cursor.moveToFirst()) {
-                RudderLogger.logInfo("DBPersistentManager: fetchEventsFromDB: fetched messages from DB");
+                MarsLogger.logInfo("DBPersistentManager: fetchEventsFromDB: fetched messages from DB");
                 while (!cursor.isAfterLast()) {
                     messageIds.add(cursor.getInt(cursor.getColumnIndex(MESSAGE_ID)));
                     messages.add(cursor.getString(cursor.getColumnIndex(MESSAGE)));
                     cursor.moveToNext();
                 }
             } else {
-                RudderLogger.logInfo("DBPersistentManager: fetchEventsFromDB: DB is empty");
+                MarsLogger.logInfo("DBPersistentManager: fetchEventsFromDB: DB is empty");
             }
             cursor.close();
         } else {
-            RudderLogger.logError("DBPersistentManager: fetchEventsFromDB: database is not readable");
+            MarsLogger.logError("DBPersistentManager: fetchEventsFromDB: database is not readable");
         }
     }
 
@@ -124,22 +124,22 @@ class DBPersistentManager extends SQLiteOpenHelper {
         SQLiteDatabase database = getReadableDatabase();
         if (database.isOpen()) {
             String countSQL = String.format(Locale.US, "SELECT count(*) FROM %s;", EVENTS_TABLE_NAME);
-            RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: getDBRecordCount: countSQL: %s", countSQL));
+            MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: getDBRecordCount: countSQL: %s", countSQL));
             Cursor cursor = database.rawQuery(countSQL, null);
             if (cursor.moveToFirst()) {
-                RudderLogger.logInfo("DBPersistentManager: getDBRecordCount: fetched count from DB");
+                MarsLogger.logInfo("DBPersistentManager: getDBRecordCount: fetched count from DB");
                 while (!cursor.isAfterLast()) {
                     // result will be in the first position
                     count = cursor.getInt(0);
                     cursor.moveToNext();
                 }
             } else {
-                RudderLogger.logInfo("DBPersistentManager: getDBRecordCount: DB is empty");
+                MarsLogger.logInfo("DBPersistentManager: getDBRecordCount: DB is empty");
             }
             // release cursor
             cursor.close();
         } else {
-            RudderLogger.logError("DBPersistentManager: getDBRecordCount: database is not readable");
+            MarsLogger.logError("DBPersistentManager: getDBRecordCount: database is not readable");
         }
 
         return count;
@@ -149,7 +149,7 @@ class DBPersistentManager extends SQLiteOpenHelper {
 
     static DBPersistentManager getInstance(Application application) {
         if (instance == null) {
-            RudderLogger.logInfo("DBPersistentManager: getInstance: creating instance");
+            MarsLogger.logInfo("DBPersistentManager: getInstance: creating instance");
             instance = new DBPersistentManager(application);
         }
         return instance;
@@ -175,11 +175,11 @@ class DBPersistentManager extends SQLiteOpenHelper {
         if (database.isOpen()) {
             // remove events
             String clearDBSQL = String.format(Locale.US, "DELETE FROM %s", EVENTS_TABLE_NAME);
-            RudderLogger.logDebug(String.format(Locale.US, "DBPersistentManager: deleteAllEvents: clearDBSQL: %s", clearDBSQL));
+            MarsLogger.logDebug(String.format(Locale.US, "DBPersistentManager: deleteAllEvents: clearDBSQL: %s", clearDBSQL));
             database.execSQL(clearDBSQL);
-            RudderLogger.logInfo("DBPersistentManager: deleteAllEvents: deleted all events");
+            MarsLogger.logInfo("DBPersistentManager: deleteAllEvents: deleted all events");
         } else {
-            RudderLogger.logError("DBPersistentManager: deleteAllEvents: database is not writable");
+            MarsLogger.logError("DBPersistentManager: deleteAllEvents: database is not writable");
         }
     }
 }

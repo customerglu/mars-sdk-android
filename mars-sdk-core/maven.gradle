@@ -11,7 +11,7 @@ ext {
     siteUrl = 'https://github.com/marax-ai/mars-sdk-android'
     gitUrl = 'https://github.com/marax-ai/mars-sdk-android.git'
 
-    libraryVersion = '0.1.4'
+    libraryVersion = '0.1.5'
 
     developerId = 'juluahamed'
     developerName = 'Julu Ahamed'

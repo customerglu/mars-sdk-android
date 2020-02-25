@@ -28,150 +28,150 @@ import java.util.Map;
  * */
 class EventRepository {
     private String authHeaderString;
-    private RudderConfig config;
+    private MarsConfig config;
     private DBPersistentManager dbManager;
-    private RudderServerConfigManager configManager;
-    private Map<String, RudderIntegration> integrationOperationsMap = new HashMap<>();
-    private final ArrayList<RudderMessage> eventReplayMessage = new ArrayList<>();
-    private Map<String, RudderClient.Callback> integrationCallbacks = new HashMap<>();
+    private MarsServerConfigManager configManager;
+    private Map<String, MarsIntegration> integrationOperationsMap = new HashMap<>();
+    private final ArrayList<MarsMessage> eventReplayMessage = new ArrayList<>();
+    private Map<String, MarsClient.Callback> integrationCallbacks = new HashMap<>();
 
     private boolean initiated = false;
 
     /*
-     * constructor to be called from RudderClient internally.
+     * constructor to be called from MarsClient internally.
      * -- tasks to be performed
      * 1. persist the value of config
-     * 2. initiate RudderElementCache
+     * 2. initiate MarsElementCache
      * 3. initiate DBPersistentManager for SQLite operations
-     * 4. initiate RudderServerConfigManager
+     * 4. initiate MarsServerConfigManager
      * 5. start processor thread
      * 6. initiate factories
      * */
-    EventRepository(Application _application, String _writeKey, RudderConfig _config) {
+    EventRepository(Application _application, String _writeKey, MarsConfig _config) {
         // 1. set the values of writeKey, config
         try {
-            RudderLogger.logDebug(String.format("EventRepository: constructor: writeKey: %s", _writeKey));
+            MarsLogger.logDebug(String.format("EventRepository: constructor: writeKey: %s", _writeKey));
             this.authHeaderString = Base64.encodeToString((String.format(Locale.US, "%s:", _writeKey)).getBytes("UTF-8"), Base64.DEFAULT);
-            RudderLogger.logDebug(String.format("EventRepository: constructor: authHeaderString: %s", this.authHeaderString));
+            MarsLogger.logDebug(String.format("EventRepository: constructor: authHeaderString: %s", this.authHeaderString));
         } catch (UnsupportedEncodingException ex) {
-            RudderLogger.logError(ex);
+            MarsLogger.logError(ex);
         }
         this.config = _config;
-        RudderLogger.logDebug(String.format("EventRepository: constructor: %s", this.config.toString()));
+        MarsLogger.logDebug(String.format("EventRepository: constructor: %s", this.config.toString()));
 
         try {
-            // 2. initiate RudderElementCache
-            RudderLogger.logDebug("EventRepository: constructor: Initiating RudderElementCache");
-            RudderElementCache.initiate(_application);
+            // 2. initiate MarsElementCache
+            MarsLogger.logDebug("EventRepository: constructor: Initiating MarsElementCache");
+            MarsElementCache.initiate(_application);
 
             // 3. initiate DBPersistentManager for SQLite operations
-            RudderLogger.logDebug("EventRepository: constructor: Initiating DBPersistentManager");
+            MarsLogger.logDebug("EventRepository: constructor: Initiating DBPersistentManager");
             this.dbManager = DBPersistentManager.getInstance(_application);
 
-            // 4. initiate RudderServerConfigManager
-            RudderLogger.logDebug("EventRepository: constructor: Initiating RudderServerConfigManager");
-            this.configManager = RudderServerConfigManager.getInstance(_application, _writeKey, _config);
+            // 4. initiate MarsServerConfigManager
+            MarsLogger.logDebug("EventRepository: constructor: Initiating MarsServerConfigManager");
+            this.configManager = MarsServerConfigManager.getInstance(_application, _writeKey, _config);
 
             // 5. start processor thread
-            RudderLogger.logDebug("EventRepository: constructor: Starting Processor thread");
+            MarsLogger.logDebug("EventRepository: constructor: Starting Processor thread");
             Thread processorThread = new Thread(getProcessorRunnable());
             processorThread.start();
 
             // 6. initiate factories
-            RudderLogger.logDebug("EventRepository: constructor: Initiating factories");
-            this.initiateFactories();
+            MarsLogger.logDebug("EventRepository: constructor: Initiating factories");
+//            this.initiateFactories();
 
             this.initiated = true;
         } catch (Exception ex) {
-            RudderLogger.logError(ex.getCause());
+            MarsLogger.logError(ex.getCause());
         }
     }
 
     private boolean isFactoryInitialized = false;
 
-    private void initiateFactories() {
-        // initiate factory initialization after 10s
-        // let the factories capture everything they want to capture
-        if (config == null || config.getFactories() == null || config.getFactories().isEmpty()) {
-            RudderLogger.logInfo("EventRepository: initiateFactories: No native SDK factory found");
-            isFactoryInitialized = true;
-            return;
-        }
-        // initiate factories if client is initialized properly
-        final RudderClient client = RudderClient.getInstance();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    int retryCount = 0;
-                    while (!isFactoryInitialized && retryCount <= 5) {
-                        RudderServerConfig serverConfig = configManager.getConfig();
-
-                        if (serverConfig != null && serverConfig.source != null && serverConfig.source.destinations != null) {
-                            List<RudderServerDestination> destinations = serverConfig.source.destinations;
-
-                            if (destinations.isEmpty()) {
-                                RudderLogger.logInfo("EventRepository: initiateFactories: No destination found in the config");
-                            } else {
-                                Map<String, RudderServerDestination> destinationConfigMap = new HashMap<>();
-                                for (RudderServerDestination destination : destinations) {
-                                    destinationConfigMap.put(destination.destinationDefinition.displayName, destination);
-                                }
-
-                                for (RudderIntegration.Factory factory : config.getFactories()) {
-                                    // if factory is present in the config
-                                    String key = factory.key();
-                                    if (destinationConfigMap.containsKey(key)) {
-                                        RudderServerDestination destination = destinationConfigMap.get(key);
-                                        // initiate factory if destination is enabled from the dashboard
-                                        if (destination != null && destination.isDestinationEnabled) {
-                                            Object destinationConfig = destination.destinationConfig;
-                                            RudderLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: Initiating %s native SDK factory", key));
-                                            RudderIntegration<?> nativeOp = factory.create(destinationConfig, client, config);
-                                            RudderLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: Initiated %s native SDK factory", key));
-                                            integrationOperationsMap.put(key, nativeOp);
-                                            if (integrationCallbacks.containsKey(key)) {
-                                                Object nativeInstance = nativeOp.getUnderlyingInstance();
-                                                RudderClient.Callback callback = integrationCallbacks.get(key);
-                                                if (nativeInstance != null && callback != null) {
-                                                    RudderLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: Callback for %s factory invoked", key));
-                                                    callback.onReady(nativeInstance);
-                                                } else {
-                                                    RudderLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: Callback for %s factory is null", key));
-                                                }
-                                            }
-                                        } else {
-                                            RudderLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: destination was null or not enabled for %s", key));
-                                        }
-                                    } else {
-                                        RudderLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: %s is not present in configMap", key));
-                                    }
-                                }
-                            }
-
-                            isFactoryInitialized = true;
-                            synchronized (eventReplayMessage) {
-                                RudderLogger.logDebug("EventRepository: initiateFactories: replaying old messages with factory");
-                                ArrayList<RudderMessage> tempList = new ArrayList<>(eventReplayMessage);
-                                if (!tempList.isEmpty()) {
-                                    for (RudderMessage message : tempList) {
-                                        makeFactoryDump(message);
-                                    }
-                                }
-                                eventReplayMessage.clear();
-                            }
-                        } else {
-                            retryCount += 1;
-                            RudderLogger.logDebug("EventRepository: initiateFactories: retry count: " + retryCount);
-                            Thread.sleep(10000);
-                        }
-                    }
-                } catch (Exception ex) {
-                    RudderLogger.logError(ex);
-                }
-            }
-        }).start();
-    }
+//    private void initiateFactories() {
+//        // initiate factory initialization after 10s
+//        // let the factories capture everything they want to capture
+//        if (config == null || config.getFactories() == null || config.getFactories().isEmpty()) {
+//            MarsLogger.logInfo("EventRepository: initiateFactories: No native SDK factory found");
+//            isFactoryInitialized = true;
+//            return;
+//        }
+//        // initiate factories if client is initialized properly
+//        final MarsClient client = MarsClient.getInstance();
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    int retryCount = 0;
+//                    while (!isFactoryInitialized && retryCount <= 5) {
+//                        MarsServerConfig serverConfig = configManager.getConfig();
+//
+//                        if (serverConfig != null && serverConfig.source != null && serverConfig.source.destinations != null) {
+//                            List<MarsServerDestination> destinations = serverConfig.source.destinations;
+//
+//                            if (destinations.isEmpty()) {
+//                                MarsLogger.logInfo("EventRepository: initiateFactories: No destination found in the config");
+//                            } else {
+//                                Map<String, MarsServerDestination> destinationConfigMap = new HashMap<>();
+//                                for (MarsServerDestination destination : destinations) {
+//                                    destinationConfigMap.put(destination.destinationDefinition.displayName, destination);
+//                                }
+//
+//                                for (MarsIntegration.Factory factory : config.getFactories()) {
+//                                    // if factory is present in the config
+//                                    String key = factory.key();
+//                                    if (destinationConfigMap.containsKey(key)) {
+//                                        MarsServerDestination destination = destinationConfigMap.get(key);
+//                                        // initiate factory if destination is enabled from the dashboard
+//                                        if (destination != null && destination.isDestinationEnabled) {
+//                                            Object destinationConfig = destination.destinationConfig;
+//                                            MarsLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: Initiating %s native SDK factory", key));
+//                                            MarsIntegration<?> nativeOp = factory.create(destinationConfig, client, config);
+//                                            MarsLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: Initiated %s native SDK factory", key));
+//                                            integrationOperationsMap.put(key, nativeOp);
+//                                            if (integrationCallbacks.containsKey(key)) {
+//                                                Object nativeInstance = nativeOp.getUnderlyingInstance();
+//                                                MarsClient.Callback callback = integrationCallbacks.get(key);
+//                                                if (nativeInstance != null && callback != null) {
+//                                                    MarsLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: Callback for %s factory invoked", key));
+//                                                    callback.onReady(nativeInstance);
+//                                                } else {
+//                                                    MarsLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: Callback for %s factory is null", key));
+//                                                }
+//                                            }
+//                                        } else {
+//                                            MarsLogger.logDebug(String.format(Locale.US, "EventRepository: initiateFactories: destination was null or not enabled for %s", key));
+//                                        }
+//                                    } else {
+//                                        MarsLogger.logInfo(String.format(Locale.US, "EventRepository: initiateFactories: %s is not present in configMap", key));
+//                                    }
+//                                }
+//                            }
+//
+//                            isFactoryInitialized = true;
+//                            synchronized (eventReplayMessage) {
+//                                MarsLogger.logDebug("EventRepository: initiateFactories: replaying old messages with factory");
+//                                ArrayList<MarsMessage> tempList = new ArrayList<>(eventReplayMessage);
+//                                if (!tempList.isEmpty()) {
+//                                    for (MarsMessage message : tempList) {
+//                                        makeFactoryDump(message);
+//                                    }
+//                                }
+//                                eventReplayMessage.clear();
+//                            }
+//                        } else {
+//                            retryCount += 1;
+//                            MarsLogger.logDebug("EventRepository: initiateFactories: retry count: " + retryCount);
+//                            Thread.sleep(10000);
+//                        }
+//                    }
+//                } catch (Exception ex) {
+//                    MarsLogger.logError(ex);
+//                }
+//            }
+//        }).start();
+//    }
 
     private Runnable getProcessorRunnable() {
         return new Runnable() {
@@ -192,11 +192,11 @@ class EventRepository {
 
                         // get current record count from db
                         int recordCount = dbManager.getDBRecordCount();
-                        RudderLogger.logDebug(String.format(Locale.US, "EventRepository: processor: DBRecordCount: %d", recordCount));
+                        MarsLogger.logDebug(String.format(Locale.US, "EventRepository: processor: DBRecordCount: %d", recordCount));
                         // if record count exceeds threshold count, remove older events
                         if (recordCount > config.getDbCountThreshold()) {
                             // fetch extra old events
-                            RudderLogger.logDebug(String.format(Locale.US, "EventRepository: processor: OldRecordCount: %d", (recordCount - config.getDbCountThreshold())));
+                            MarsLogger.logDebug(String.format(Locale.US, "EventRepository: processor: OldRecordCount: %d", (recordCount - config.getDbCountThreshold())));
                             dbManager.fetchEventsFromDB(messageIds, messages, recordCount - config.getDbCountThreshold());
                             // remove events
                             dbManager.clearEventsFromDB(messageIds);
@@ -206,7 +206,7 @@ class EventRepository {
                         }
 
                         // fetch enough events to form a batch
-                        RudderLogger.logDebug("Fetching events to flush to sever");
+                        MarsLogger.logDebug("Fetching events to flush to sever");
                         dbManager.fetchEventsFromDB(messageIds, messages, config.getFlushQueueSize());
                         // if there are enough events to form a batch and flush to server
                         // OR
@@ -215,12 +215,12 @@ class EventRepository {
                         if (messages.size() >= config.getFlushQueueSize() || (!messages.isEmpty() && sleepCount >= config.getSleepTimeOut())) {
                             // form payload JSON form the list of messages
                             String payload = getPayloadFromMessages(messages);
-                            RudderLogger.logDebug(String.format(Locale.US, "EventRepository: processor: payload: %s", payload));
+                            MarsLogger.logDebug(String.format(Locale.US, "EventRepository: processor: payload: %s", payload));
                             if (payload != null) {
                                 // send payload to server if it is not null
                                 String response = flushEventsToServer(payload);
-                                RudderLogger.logInfo(String.format(Locale.US, "EventRepository: processor: ServerResponse: %s", response));
-                                RudderLogger.logInfo(String.format(Locale.US, "EventRepository: processor: EventCount: %d", messages.size()));
+                                MarsLogger.logInfo(String.format(Locale.US, "EventRepository: processor: ServerResponse: %s", response));
+                                MarsLogger.logInfo(String.format(Locale.US, "EventRepository: processor: EventCount: %d", messages.size()));
                                 // if success received from server
                                 if (response != null && response.equalsIgnoreCase("OK")) {
                                     // remove events from DB
@@ -231,12 +231,12 @@ class EventRepository {
                             }
                         }
                         // increment sleepCount to track total elapsed seconds
-                        RudderLogger.logDebug(String.format(Locale.US, "EventRepository: processor: SleepCount: %d", sleepCount));
+                        MarsLogger.logDebug(String.format(Locale.US, "EventRepository: processor: SleepCount: %d", sleepCount));
                         sleepCount += 1;
                         // retry entire logic in 1 second
                         Thread.sleep(1000);
                     } catch (Exception ex) {
-                        RudderLogger.logError(ex);
+                        MarsLogger.logError(ex);
                     }
                 }
             }
@@ -251,9 +251,9 @@ class EventRepository {
      * */
     private String getPayloadFromMessages(ArrayList<String> messages) {
         try {
-            RudderLogger.logDebug("EventRepository: getPayloadFromMessages: recordCount: " + messages.size());
+            MarsLogger.logDebug("EventRepository: getPayloadFromMessages: recordCount: " + messages.size());
             String sentAtTimestamp = Utils.getTimeStamp();
-            RudderLogger.logDebug("EventRepository: getPayloadFromMessages: sentAtTimestamp: " + sentAtTimestamp);
+            MarsLogger.logDebug("EventRepository: getPayloadFromMessages: sentAtTimestamp: " + sentAtTimestamp);
             // get string builder
             StringBuilder builder = new StringBuilder();
             // append initial json token
@@ -283,7 +283,7 @@ class EventRepository {
             // finally return the entire payload
             return builder.toString();
         } catch (Exception ex) {
-            RudderLogger.logError(ex);
+            MarsLogger.logError(ex);
         }
         return null;
     }
@@ -293,13 +293,13 @@ class EventRepository {
      * */
     private String flushEventsToServer(String payload) throws IOException {
         if (TextUtils.isEmpty(this.authHeaderString)) {
-            RudderLogger.logError("EventRepository: flushEventsToServer: WriteKey was not correct. Aborting flush to server");
+            MarsLogger.logError("EventRepository: flushEventsToServer: WriteKey was not correct. Aborting flush to server");
             return null;
         }
 
         // get endPointUrl form config object
         String endPointUri = config.getEndPointUri() + "v1/batch";
-        RudderLogger.logDebug("EventRepository: flushEventsToServer: endPointRepository: " + endPointUri);
+        MarsLogger.logDebug("EventRepository: flushEventsToServer: endPointRepository: " + endPointUri);
 
         // create url object
         URL url = new URL(endPointUri);
@@ -343,7 +343,7 @@ class EventRepository {
                 res = bis.read();
             }
             // finally return response when reading from server is completed
-            RudderLogger.logError("EventRepository: flushEventsToServer: ServerError: " + baos.toString());
+            MarsLogger.logError("EventRepository: flushEventsToServer: ServerError: " + baos.toString());
 
             return null;
         }
@@ -359,13 +359,13 @@ class EventRepository {
 
     public String registerDevice(String payload) throws IOException {
         if (TextUtils.isEmpty(this.authHeaderString)) {
-            RudderLogger.logError("EventRepository: flushEventsToServer: WriteKey was not correct. Aborting flush to server");
+            MarsLogger.logError("EventRepository: flushEventsToServer: WriteKey was not correct. Aborting flush to server");
             return null;
         }
 
         // get endPointUrl form config object
         String endPointUri = "https://encomv8e2z13s.x.pipedream.net";
-        RudderLogger.logDebug("EventRepository: flushEventsToServer: endPointRepository: " + endPointUri);
+        MarsLogger.logDebug("EventRepository: flushEventsToServer: endPointRepository: " + endPointUri);
 
         // create url object
         URL url = new URL(endPointUri);
@@ -409,7 +409,7 @@ class EventRepository {
                 res = bis.read();
             }
             // finally return response when reading from server is completed
-            RudderLogger.logError("EventRepository: flushEventsToServer: ServerError: " + baos.toString());
+            MarsLogger.logError("EventRepository: flushEventsToServer: ServerError: " + baos.toString());
 
             return null;
         }
@@ -417,28 +417,28 @@ class EventRepository {
     /*
      * generic method for dumping all the events
      * */
-    void dump(@NonNull RudderMessage message) {
+    void dump(@NonNull MarsMessage message) {
         if (!initiated) return;
 
-        makeFactoryDump(message);
+//        makeFactoryDump(message);
         String eventJson = new Gson().toJson(message);
-        RudderLogger.logDebug(String.format(Locale.US, "EventRepository: dump: message: %s", eventJson));
+        MarsLogger.logDebug(String.format(Locale.US, "EventRepository: dump: message: %s", eventJson));
         dbManager.saveEvent(eventJson);
     }
 
-    private void makeFactoryDump(RudderMessage message) {
+    private void makeFactoryDump(MarsMessage message) {
         if (isFactoryInitialized) {
-            RudderLogger.logDebug("EventRepository: makeFactoryDump: dumping message to native sdk factories");
+            MarsLogger.logDebug("EventRepository: makeFactoryDump: dumping message to native sdk factories");
             message.setIntegrations(prepareIntegrations());
             for (String key : integrationOperationsMap.keySet()) {
-                RudderLogger.logDebug(String.format(Locale.US, "EventRepository: makeFactoryDump: dumping for %s", key));
-                RudderIntegration integration = integrationOperationsMap.get(key);
+                MarsLogger.logDebug(String.format(Locale.US, "EventRepository: makeFactoryDump: dumping for %s", key));
+                MarsIntegration integration = integrationOperationsMap.get(key);
                 if (integration != null) {
                     integration.dump(message);
                 }
             }
         } else {
-            RudderLogger.logDebug("EventRepository: makeFactoryDump: factories are not initialized. dumping to replay queue");
+            MarsLogger.logDebug("EventRepository: makeFactoryDump: factories are not initialized. dumping to replay queue");
             eventReplayMessage.add(message);
         }
     }
@@ -454,12 +454,12 @@ class EventRepository {
     }
 
     void reset() {
-        RudderLogger.logDebug("EventRepository: reset: resetting the SDK");
+        MarsLogger.logDebug("EventRepository: reset: resetting the SDK");
         dbManager.deleteAllEvents();
     }
 
-    void onIntegrationReady(String key, RudderClient.Callback callback) {
-        RudderLogger.logDebug(String.format(Locale.US, "EventRepository: onIntegrationReady: callback registered for %s", key));
+    void onIntegrationReady(String key, MarsClient.Callback callback) {
+        MarsLogger.logDebug(String.format(Locale.US, "EventRepository: onIntegrationReady: callback registered for %s", key));
         integrationCallbacks.put(key, callback);
     }
 

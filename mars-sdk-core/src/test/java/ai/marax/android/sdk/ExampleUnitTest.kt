@@ -1,4 +1,4 @@
-package com.rudderlabs.android.sdk
+package ai.marax.android.sdk;
 
 import org.junit.Test
 

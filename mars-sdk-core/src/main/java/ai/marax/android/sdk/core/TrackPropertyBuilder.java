@@ -2,7 +2,7 @@ package ai.marax.android.sdk.core;
 
 import android.text.TextUtils;
 
-public class TrackPropertyBuilder extends RudderPropertyBuilder {
+public class TrackPropertyBuilder extends MarsPropertyBuilder {
     private String category = null;
 
     public TrackPropertyBuilder setCategory(String category) {
@@ -25,10 +25,10 @@ public class TrackPropertyBuilder extends RudderPropertyBuilder {
     }
 
     @Override
-    public RudderProperty build() {
-        RudderProperty property = new RudderProperty();
+    public MarsProperty build() {
+        MarsProperty property = new MarsProperty();
         if (TextUtils.isEmpty(category)) {
-            RudderLogger.logError("category can not be null or empty");
+            MarsLogger.logError("category can not be null or empty");
         } else {
             property.putValue("category", this.category);
             property.putValue("label", this.label);

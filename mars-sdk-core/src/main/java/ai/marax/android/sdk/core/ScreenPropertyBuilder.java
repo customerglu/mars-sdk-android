@@ -2,7 +2,7 @@ package ai.marax.android.sdk.core;
 
 import android.text.TextUtils;
 
-public class ScreenPropertyBuilder extends RudderPropertyBuilder {
+public class ScreenPropertyBuilder extends MarsPropertyBuilder {
     private String name;
 
     public ScreenPropertyBuilder setScreenName(String name) {
@@ -11,10 +11,10 @@ public class ScreenPropertyBuilder extends RudderPropertyBuilder {
     }
 
     @Override
-    public RudderProperty build() {
-        RudderProperty property = new RudderProperty();
+    public MarsProperty build() {
+        MarsProperty property = new MarsProperty();
         if (TextUtils.isEmpty(name)) {
-            RudderLogger.logError("name can not be empty");
+            MarsLogger.logError("name can not be empty");
         } else {
             property.put("name", name);
         }
